@@ -1,1 +1,0 @@
-// Bottom tabs navigation
