@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SeniorSync - Your AI Life Companion</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="translations.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <h1>🌟 SeniorSync</h1>
+            <button class="emergency-btn" id="emergencyBtn">🚨 EMERGENCY</button>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="tab-nav">
+            <button class="tab-btn active" data-tab="home">🏠 Home</button>
+            <button class="tab-btn" data-tab="health">💊 Health</button>
+            <button class="tab-btn" data-tab="connections">👥 Connections</button>
+            <button class="tab-btn" data-tab="safety">🛡️ Safety</button>
+            <button class="tab-btn" data-tab="chat">💬 Chat</button>
+        </nav>
+
+        <!-- Tab Content -->
+        <main class="tab-content">
+            <!-- Home Tab -->
+            <div class="tab-pane active" id="home">
+                <div class="dashboard">
+                    <!-- Calendar & Weather Section -->
+                    <div class="card calendar-card">
+                        <h2>📅 Your Week</h2>
+                        <div id="weekCalendar" class="week-calendar"></div>
+                        <div id="todayWeatherForecast" class="weather-forecast">
+                            <h3>☀️ Today's Weather</h3>
+                            <p id="weatherForecast">Loading...</p>
+                        </div>
+                    </div>
+
+                    <!-- Daily Health Report Button -->
+                    <div class="card health-report-card">
+                        <h2>📝 Daily Health Report</h2>
+                        <p class="info-text" id="healthReportStatus">Track your daily wellness</p>
+                        <button class="big-button primary-btn" onclick="handleHealthReportClick()" id="healthReportBtn">
+                            Start Today's Health Check
+                        </button>
+                    </div>
+
+                    <div class="card medications-card">
+                        <h2>💊 Today's Medications</h2>
+                        <div id="todaysMeds">
+                            <p>No medications scheduled</p>
+                        </div>
+                    </div>
+
+                    <div class="card activity-card">
+                        <h2>📅 Today's Activities</h2>
+                        <div id="todaysActivities">
+                            <p>No activities planned</p>
+                        </div>
+                    </div>
+
+                    <button class="big-button primary-btn" onclick="showTab('chat')">
+                        💬 Talk to Your AI Companion
+                    </button>
+                </div>
+            </div>
+
+            <!-- Health Tab -->
+            <div class="tab-pane" id="health">
+                <h2>💊 Medications</h2>
+                
+                <button class="big-button primary-btn" id="addMedBtn">+ Add Medication</button>
+                
+                <div id="medicationList" class="medication-list"></div>
+
+                <!-- Daily Health Report Section -->
+                <div class="card" style="margin-top: 20px;">
+                    <h3>📝 Daily Health Report</h3>
+                    <button class="big-button primary-btn" onclick="startHealthCheck()">Start Health Check</button>
+                    <div id="healthReportContent" style="margin-top: 15px;"></div>
+                </div>
+
+                <!-- Add Medication Form (hidden by default) -->
+                <div id="addMedForm" class="modal" style="display: none;">
+                    <div class="modal-content">
+                        <h3>Add New Medication</h3>
+                        <form id="medicationForm">
+                            <label>Medication Name:</label>
+                            <input type="text" id="medName" required class="large-input">
+                            
+                            <label>Dosage:</label>
+                            <input type="text" id="medDosage" placeholder="e.g., 10mg" required class="large-input">
+                            
+                            <label>Times (one per line):</label>
+                            <textarea id="medTimes" placeholder="08:00&#10;20:00" required class="large-input"></textarea>
+                            
+                            <label>Instructions:</label>
+                            <textarea id="medInstructions" placeholder="Take with food" class="large-input"></textarea>
+                            
+                            <div class="button-group">
+                                <button type="submit" class="big-button primary-btn">Save</button>
+                                <button type="button" class="big-button" onclick="closeModal('addMedForm')">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Connections Tab -->
+            <div class="tab-pane" id="connections">
+                <h2>👥 Community & Connections</h2>
+                
+                <div class="card">
+                    <h3>📍 Local Activities Near You</h3>
+                    <div id="localActivities">Loading...</div>
+                </div>
+
+                <div class="card">
+                    <h3>🤝 Intergenerational Matches</h3>
+                    <p class="info-text">Connect with students who can help with technology and learn from your wisdom!</p>
+                    <div id="studentMatches">Loading...</div>
+                </div>
+            </div>
+
+            <!-- Safety Tab -->
+            <div class="tab-pane" id="safety">
+                <h2>🛡️ Safety & Protection</h2>
+                
+                <div class="card">
+                    <h3>🔍 Is This Real?</h3>
+                    <p class="info-text">Not sure if something is true? Ask me to check!</p>
+                    <textarea id="factCheckInput" placeholder="Paste a news headline or claim you want to verify..." class="large-input"></textarea>
+                    <div class="button-group">
+                        <button class="big-button primary-btn" onclick="checkFact()">Check This</button>
+                        <button class="big-button" onclick="voiceCheckFact()" id="voiceFactBtn">🎤 Voice Check</button>
+                    </div>
+                    <div id="factCheckResult"></div>
+                </div>
+
+                <div class="card">
+                    <h3>⚠️ Scam Detector</h3>
+                    <p class="info-text">Received a suspicious message? Let me check it for you.</p>
+                    <textarea id="scamInput" placeholder="Paste the suspicious message here..." class="large-input"></textarea>
+                    <div class="button-group">
+                        <button class="big-button primary-btn" onclick="checkScam()">Analyze Message</button>
+                        <button class="big-button" onclick="voiceCheckScam()" id="voiceScamBtn">🎤 Voice Check</button>
+                    </div>
+                    <div id="scamResult"></div>
+                </div>
+
+                <div class="card">
+                    <h3>📋 Common Scam Examples</h3>
+                    <button class="big-button" onclick="toggleScamExamples()" id="scamExamplesBtn">Show Examples</button>
+                    <div id="scamExamples" style="display: none;"></div>
+                </div>
+            </div>
+
+            <!-- Chat Tab -->
+            <div class="tab-pane" id="chat">
+                <h2>💬 Your AI Companion</h2>
+                <div class="language-selector">
+                    <label for="languageSelect">Language:</label>
+                    <select id="languageSelect" class="large-input" onchange="changeLanguage()">
+                        <option value="en-US">English</option>
+                        <option value="sk-SK">Slovenčina</option>
+                        <option value="cs-CZ">Čeština</option>
+                        <option value="de-DE">Deutsch</option>
+                    </select>
+                </div>
+                <div class="chat-container">
+                    <div id="chatMessages" class="chat-messages"></div>
+                    <div class="chat-input-container">
+                        <div class="input-with-mic">
+                            <textarea id="chatInput" placeholder="Type your message or click the microphone..." class="large-input" rows="3"></textarea>
+                            <button class="mic-button" id="micButton" onclick="toggleVoiceInput()" title="Click to speak">
+                                🎤
+                            </button>
+                        </div>
+                        <button class="big-button primary-btn" onclick="sendMessage()">Send</button>
+                    </div>
+                    <div id="voiceStatus" class="voice-status"></div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Floating Microphone Button (visible on all tabs) -->
+        <button class="floating-mic-button" id="floatingMicButton" onclick="toggleVoiceInput()" title="Voice command (works on any tab)">
+            🎤
+        </button>
+        <div id="floatingVoiceStatus" class="floating-voice-status"></div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
