@@ -7,7 +7,7 @@ const translations = {
         // Tabs
         tabHome: '🏠 Home',
         tabHealth: '💊 Health',
-        tabConnections: '👥 Connections',
+        tabSocial: '🌐 Social',
         tabSafety: '🛡️ Safety',
         tabChat: '💬 Chat',
         
@@ -28,6 +28,9 @@ const translations = {
         // Health Tab
         healthTitle: '💊 Medications',
         addMedication: '+ Add Medication',
+        healthReportSection: '📝 Daily Health Report',
+        startHealthCheckBtn: 'Start Health Check',
+        viewTodaysReport: 'View Today\'s Report',
         medicationName: 'Medication Name:',
         dosage: 'Dosage:',
         times: 'Times (one per line):',
@@ -39,8 +42,12 @@ const translations = {
         timesLabel: 'Times:',
         instructionsLabel: 'Instructions:',
         
-        // Connections Tab
-        connectionsTitle: '👥 Community & Connections',
+        // Social Tab
+        socialTitle: '🌐 Social & Community',
+        todaysNews: '📰 Today\'s News',
+        stayInformed: 'Stay informed with today\'s top headlines',
+        readMore: 'Read More',
+        loadingNews: 'Loading news...',
         localActivities: '📍 Local Activities Near You',
         intergenerationalMatches: '🤝 Intergenerational Matches',
         intergenerationalDesc: 'Connect with students who can help with technology and learn from your wisdom!',
@@ -94,7 +101,7 @@ const translations = {
         // Tabs
         tabHome: '🏠 Domov',
         tabHealth: '💊 Zdravie',
-        tabConnections: '👥 Kontakty',
+        tabSocial: '🌐 Sociálne',
         tabSafety: '🛡️ Bezpečnosť',
         tabChat: '💬 Rozhovor',
         
@@ -115,6 +122,9 @@ const translations = {
         // Health Tab
         healthTitle: '💊 Lieky',
         addMedication: '+ Pridať liek',
+        healthReportSection: '📝 Denná zdravotná správa',
+        startHealthCheckBtn: 'Začať zdravotnú kontrolu',
+        viewTodaysReport: 'Zobraziť dnešnú správu',
         medicationName: 'Názov lieku:',
         dosage: 'Dávkovanie:',
         times: 'Časy (jeden na riadok):',
@@ -126,8 +136,12 @@ const translations = {
         timesLabel: 'Časy:',
         instructionsLabel: 'Pokyny:',
         
-        // Connections Tab
-        connectionsTitle: '👥 Komunita a Kontakty',
+        // Social Tab
+        socialTitle: '🌐 Sociálne a komunita',
+        todaysNews: '📰 Dnešné správy',
+        stayInformed: 'Zostaňte informovaní s dnešnými hlavnými správami',
+        readMore: 'Čítať viac',
+        loadingNews: 'Načítavam správy...',
         localActivities: '📍 Miestne aktivity vo vašom okolí',
         intergenerationalMatches: '🤝 Medzigeneračné spojenia',
         intergenerationalDesc: 'Spojte sa so študentmi, ktorí vám pomôžu s technológiami a naučia sa od vašej múdrosti!',
@@ -181,7 +195,7 @@ const translations = {
         // Tabs
         tabHome: '🏠 Domů',
         tabHealth: '💊 Zdraví',
-        tabConnections: '👥 Kontakty',
+        tabSocial: '🌐 Sociální',
         tabSafety: '🛡️ Bezpečnost',
         tabChat: '💬 Rozhovor',
         
@@ -202,6 +216,9 @@ const translations = {
         // Health Tab
         healthTitle: '💊 Léky',
         addMedication: '+ Přidat lék',
+        healthReportSection: '📝 Denní zdravotní zpráva',
+        startHealthCheckBtn: 'Zahájit zdravotní kontrolu',
+        viewTodaysReport: 'Zobrazit dnešní zprávu',
         medicationName: 'Název léku:',
         dosage: 'Dávkování:',
         times: 'Časy (jeden na řádek):',
@@ -213,8 +230,12 @@ const translations = {
         timesLabel: 'Časy:',
         instructionsLabel: 'Pokyny:',
         
-        // Connections Tab
-        connectionsTitle: '👥 Komunita a Kontakty',
+        // Social Tab
+        socialTitle: '🌐 Sociální a komunita',
+        todaysNews: '📰 Dnešní zprávy',
+        stayInformed: 'Zůstaňte informováni s dnešními hlavními zprávami',
+        readMore: 'Číst více',
+        loadingNews: 'Načítání zpráv...',
         localActivities: '📍 Místní aktivity ve vašem okolí',
         intergenerationalMatches: '🤝 Mezigenerační spojení',
         intergenerationalDesc: 'Spojte se se studenty, kteří vám pomohou s technologiemi a naučí se od vaší moudrosti!',
@@ -268,7 +289,7 @@ const translations = {
         // Tabs
         tabHome: '🏠 Startseite',
         tabHealth: '💊 Gesundheit',
-        tabConnections: '👥 Kontakte',
+        tabSocial: '🌐 Soziales',
         tabSafety: '🛡️ Sicherheit',
         tabChat: '💬 Chat',
         
@@ -289,6 +310,9 @@ const translations = {
         // Health Tab
         healthTitle: '💊 Medikamente',
         addMedication: '+ Medikament hinzufügen',
+        healthReportSection: '📝 Täglicher Gesundheitsbericht',
+        startHealthCheckBtn: 'Gesundheitscheck starten',
+        viewTodaysReport: 'Heutigen Bericht anzeigen',
         medicationName: 'Medikamentenname:',
         dosage: 'Dosierung:',
         times: 'Zeiten (eine pro Zeile):',
@@ -300,8 +324,12 @@ const translations = {
         timesLabel: 'Zeiten:',
         instructionsLabel: 'Anweisungen:',
         
-        // Connections Tab
-        connectionsTitle: '👥 Gemeinschaft und Kontakte',
+        // Social Tab
+        socialTitle: '🌐 Soziales & Gemeinschaft',
+        todaysNews: '📰 Heutige Nachrichten',
+        stayInformed: 'Bleiben Sie informiert mit den heutigen Top-Schlagzeilen',
+        readMore: 'Weiterlesen',
+        loadingNews: 'Nachrichten werden geladen...',
         localActivities: '📍 Lokale Aktivitäten in Ihrer Nähe',
         intergenerationalMatches: '🤝 Generationenübergreifende Verbindungen',
         intergenerationalDesc: 'Verbinden Sie sich mit Studenten, die Ihnen bei Technologie helfen und von Ihrer Weisheit lernen!',
@@ -365,7 +393,7 @@ function updateUILanguage() {
     const tabButtons = document.querySelectorAll('.tab-btn');
     tabButtons[0].textContent = t('tabHome');
     tabButtons[1].textContent = t('tabHealth');
-    tabButtons[2].textContent = t('tabConnections');
+    tabButtons[2].textContent = t('tabSocial');
     tabButtons[3].textContent = t('tabSafety');
     tabButtons[4].textContent = t('tabChat');
     
@@ -390,6 +418,11 @@ function updateUILanguage() {
     document.querySelector('#health h2').textContent = t('healthTitle');
     document.getElementById('addMedBtn').textContent = t('addMedication');
     
+    const healthReportTitle = document.getElementById('healthReportSectionTitle');
+    const healthReportBtn = document.getElementById('startHealthCheckBtn');
+    if (healthReportTitle) healthReportTitle.textContent = t('healthReportSection');
+    if (healthReportBtn) healthReportBtn.textContent = t('startHealthCheckBtn');
+    
     // Medication form
     const formLabels = document.querySelectorAll('#addMedForm label');
     if (formLabels.length >= 4) {
@@ -405,12 +438,13 @@ function updateUILanguage() {
         formButtons[1].textContent = t('cancel');
     }
     
-    // Connections tab
-    document.querySelector('#connections h2').textContent = t('connectionsTitle');
-    const connectionsCards = document.querySelectorAll('#connections .card h3');
-    if (connectionsCards.length >= 2) {
-        connectionsCards[0].textContent = t('localActivities');
-        connectionsCards[1].textContent = t('intergenerationalMatches');
+    // Social tab
+    document.querySelector('#connections h2').textContent = t('socialTitle');
+    const socialCards = document.querySelectorAll('#connections .card h3');
+    if (socialCards.length >= 3) {
+        socialCards[0].textContent = t('todaysNews');
+        socialCards[1].textContent = t('localActivities');
+        socialCards[2].textContent = t('intergenerationalMatches');
     }
     
     const connectionsDesc = document.querySelector('#connections .info-text');

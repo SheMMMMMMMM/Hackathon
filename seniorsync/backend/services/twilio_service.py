@@ -1,45 +1,26 @@
-"""Twilio service for SMS and voice calls"""
+"""Mock SMS service for demo (Twilio removed)"""
 import os
-from twilio.rest import Client
 
-# Initialize Twilio client
-account_sid = os.getenv("TWILIO_ACCOUNT_SID")
-auth_token = os.getenv("TWILIO_AUTH_TOKEN")
-twilio_phone = os.getenv("TWILIO_PHONE_NUMBER")
-
-client = None
-if account_sid and auth_token:
-    client = Client(account_sid, auth_token)
+# Mock implementation - logs instead of sending real SMS
 
 async def send_sms(to_number: str, message: str) -> bool:
     """
-    Send SMS via Twilio
+    Mock SMS sending (logs to console)
     
     Args:
         to_number: Recipient phone number (E.164 format)
         message: Message text
     
     Returns:
-        True if successful
+        True (always successful in demo mode)
     """
-    try:
-        if not client:
-            raise Exception("Twilio not configured")
-        
-        message = client.messages.create(
-            body=message,
-            from_=twilio_phone,
-            to=to_number
-        )
-        
-        return message.sid is not None
-    
-    except Exception as e:
-        raise Exception(f"SMS sending error: {str(e)}")
+    print(f"[DEMO MODE - SMS] To: {to_number}")
+    print(f"[DEMO MODE - SMS] Message: {message}")
+    return True
 
 async def send_emergency_alert(to_numbers: list, user_name: str, location: str = None) -> bool:
     """
-    Send emergency alert to family members
+    Mock emergency alert to family members (logs to console)
     
     Args:
         to_numbers: List of family phone numbers
@@ -47,23 +28,22 @@ async def send_emergency_alert(to_numbers: list, user_name: str, location: str =
         location: Optional location information
     
     Returns:
-        True if at least one message sent successfully
+        True (always successful in demo mode)
     """
-    try:
-        message_text = f"🚨 EMERGENCY ALERT: {user_name} has pressed the emergency button."
-        if location:
-            message_text += f"\nLocation: {location}"
-        message_text += "\nPlease check on them immediately."
-        
-        success_count = 0
-        for number in to_numbers:
-            try:
-                await send_sms(number, message_text)
-                success_count += 1
-            except:
-                continue
-        
-        return success_count > 0
+    print(f"\n{'='*60}")
+    print(f"🚨 EMERGENCY ALERT - DEMO MODE")
+    print(f"{'='*60}")
+    print(f"User: {user_name}")
+    print(f"Alert would be sent to {len(to_numbers)} contact(s):")
     
-    except Exception as e:
-        raise Exception(f"Emergency alert error: {str(e)}")
+    for i, number in enumerate(to_numbers, 1):
+        message = f"🚨 EMERGENCY: {user_name} needs help immediately!"
+        if location:
+            message += f" Location: {location}"
+        message += " Please check on them right away."
+        
+        print(f"\n  Contact {i}: {number}")
+        print(f"  Message: {message}")
+    
+    print(f"{'='*60}\n")
+    return True

@@ -24,27 +24,23 @@ class EmergencyResponse(BaseModel):
 @router.post("/alert", response_model=EmergencyResponse)
 async def send_alert(request: EmergencyRequest):
     """
-    Send emergency alert to family contacts
+    Send emergency alert to family contacts (DEMO MODE - logs to console)
     """
     try:
         phone_numbers = [contact.phone for contact in request.contacts]
         
-        # Try to send alerts
-        try:
-            success = await send_emergency_alert(phone_numbers, request.user_name, request.location)
-            if success:
-                return EmergencyResponse(
-                    success=True,
-                    message="Emergency alerts sent successfully",
-                    alerts_sent=len(phone_numbers)
-                )
-        except Exception as e:
-            # If Twilio is not configured, return simulated success for demo
-            return EmergencyResponse(
-                success=True,
-                message=f"[DEMO MODE] Emergency alert would be sent to {len(phone_numbers)} contacts",
-                alerts_sent=len(phone_numbers)
-            )
+        # Send alerts (demo mode - logs to console)
+        success = await send_emergency_alert(phone_numbers, request.user_name, request.location)
+        
+        return EmergencyResponse(
+            success=True,
+            message=f"[DEMO MODE] Emergency alert logged for {len(phone_numbers)} contact(s). Check server console for details.",
+            alerts_sent=len(phone_numbers)
+        )
     
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return EmergencyResponse(
+            success=False,
+            message=f"Error: {str(e)}",
+            alerts_sent=0
+        )

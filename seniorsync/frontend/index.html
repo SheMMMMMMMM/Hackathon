@@ -19,7 +19,7 @@
         <nav class="tab-nav">
             <button class="tab-btn active" data-tab="home">🏠 Home</button>
             <button class="tab-btn" data-tab="health">💊 Health</button>
-            <button class="tab-btn" data-tab="connections">👥 Connections</button>
+            <button class="tab-btn" data-tab="connections">🌐 Social</button>
             <button class="tab-btn" data-tab="safety">🛡️ Safety</button>
             <button class="tab-btn" data-tab="chat">💬 Chat</button>
         </nav>
@@ -78,8 +78,8 @@
 
                 <!-- Daily Health Report Section -->
                 <div class="card" style="margin-top: 20px;">
-                    <h3>📝 Daily Health Report</h3>
-                    <button class="big-button primary-btn" onclick="startHealthCheck()">Start Health Check</button>
+                    <h3 id="healthReportSectionTitle">📝 Daily Health Report</h3>
+                    <button class="big-button primary-btn" onclick="startHealthCheck()" id="startHealthCheckBtn">Start Health Check</button>
                     <div id="healthReportContent" style="margin-top: 15px;"></div>
                 </div>
 
@@ -109,10 +109,16 @@
                 </div>
             </div>
 
-            <!-- Connections Tab -->
+            <!-- Social Tab -->
             <div class="tab-pane" id="connections">
-                <h2>👥 Community & Connections</h2>
+                <h2>🌐 Social & Community</h2>
                 
+                <div class="card">
+                    <h3>📰 Today's News</h3>
+                    <p class="info-text">Stay informed with today's top headlines</p>
+                    <div id="newsSection">Loading news...</div>
+                </div>
+
                 <div class="card">
                     <h3>📍 Local Activities Near You</h3>
                     <div id="localActivities">Loading...</div>

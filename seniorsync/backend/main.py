@@ -14,14 +14,14 @@ app = FastAPI(title="SeniorSync API", version="1.0.0")
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=["http://localhost:5173", "http://localhost:3000", "*"],  # Allow all origins for development
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # Import routers
-from routers import ai_agent, medication, scam_detection, emergency, activities, fact_checker, weather
+from routers import ai_agent, medication, scam_detection, emergency, activities, fact_checker, weather, news, telegram, eldercare_report, speech
 
 # Include routers
 app.include_router(ai_agent.router, prefix="/api/ai", tags=["AI Agent"])
@@ -31,6 +31,10 @@ app.include_router(emergency.router, prefix="/api/emergency", tags=["Emergency"]
 app.include_router(activities.router, prefix="/api/activities", tags=["Activities"])
 app.include_router(fact_checker.router, prefix="/api/fact-check", tags=["Fact Checker"])
 app.include_router(weather.router, prefix="/api/weather", tags=["Weather"])
+app.include_router(news.router, prefix="/api/news", tags=["News"])
+app.include_router(telegram.router, prefix="/api/telegram", tags=["Telegram Alerts"])
+app.include_router(eldercare_report.router, prefix="/api/eldercare", tags=["ElderCare Database"])
+app.include_router(speech.router, prefix="/api/speech", tags=["Speech-to-Text"])
 
 @app.get("/")
 async def root():

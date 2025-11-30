@@ -19,6 +19,7 @@ let currentLanguage = 'en-US'; // Default language
 let voiceInputMode = null; // 'fact', 'scam', or null for chat
 let healthCheckActive = false;
 let healthCheckData = {};
+let lastHealthCheckDate = null;
 let scamExamplesVisible = false;
 
 // Initialize app on load
@@ -33,6 +34,7 @@ function initializeApp() {
     loadWeekCalendar();
     loadTodayWeatherForecast();
     loadMedications();
+    loadNews();
     loadLocalActivities();
     loadStudentMatches();
     initializeChat();
@@ -79,28 +81,63 @@ function setupEmergencyButton() {
 }
 
 async function sendEmergencyAlert() {
-    if (!confirm('Send emergency alert to your family contacts?')) {
+    const confirmMessages = {
+        'en-US': 'Send emergency alert to your family contacts?',
+        'sk-SK': 'Odoslať núdzovú výzvu vašim rodinným kontaktom?',
+        'cs-CZ': 'Odeslat nouzovou výzvu vašim rodinným kontaktům?',
+        'de-DE': 'Notruf an Ihre Familienkontakte senden?'
+    };
+    
+    if (!confirm(confirmMessages[currentLanguage] || confirmMessages['en-US'])) {
         return;
     }
     
     try {
-        const response = await fetch(`${API_BASE_URL}/emergency/alert`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                user_name: currentUser.name,
-                contacts: [
-                    { name: 'John (Son)', phone: '+1234567890', relationship: 'son' },
-                    { name: 'Sarah (Daughter)', phone: '+1234567891', relationship: 'daughter' }
-                ],
-                location: 'Home'
-            })
-        });
+        // Send Telegram alert (new method)
+        const telegramAlertData = {
+            alert_type: 'emergency',
+            message: 'Emergency button pressed by user',
+            health_data: healthCheckData,
+            user_name: currentUser.name,
+            language: currentLanguage
+        };
         
-        const result = await response.json();
-        alert('✅ Emergency alert sent to your family!');
+        await sendTelegramAlert(telegramAlertData);
+        
+        // Also try old emergency endpoint (for SMS if Twilio configured)
+        try {
+            await fetch(`${API_BASE_URL}/emergency/alert`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_name: currentUser.name,
+                    contacts: [
+                        { name: 'Family Contact', phone: '+1234567890', relationship: 'family' }
+                    ],
+                    location: 'Home'
+                })
+            });
+        } catch (e) {
+            // Ignore SMS errors
+        }
+        
+        const successMessages = {
+            'en-US': '✅ Emergency alert sent to your family!',
+            'sk-SK': '✅ Núdzová výzva odoslaná vašej rodine!',
+            'cs-CZ': '✅ Nouzová výzva odeslána vaší rodině!',
+            'de-DE': '✅ Notruf an Ihre Familie gesendet!'
+        };
+        
+        alert(successMessages[currentLanguage] || successMessages['en-US']);
     } catch (error) {
-        alert('✅ Emergency alert sent to your family!');
+        const errorMessages = {
+            'en-US': '⚠️ Emergency alert may not have been sent. Please contact family directly.',
+            'sk-SK': '⚠️ Núdzová výzva možno nebola odoslaná. Prosím kontaktujte rodinu priamo.',
+            'cs-CZ': '⚠️ Nouzová výzva možná nebyla odeslána. Prosím kontaktujte rodinu přímo.',
+            'de-DE': '⚠️ Notruf wurde möglicherweise nicht gesendet. Bitte kontaktieren Sie die Familie direkt.'
+        };
+        
+        alert(errorMessages[currentLanguage] || errorMessages['en-US']);
     }
 }
 
@@ -219,17 +256,24 @@ function handleHealthReportClick() {
 
 function updateHealthReportStatus() {
     const reportEl = document.getElementById('healthReportContent');
-    const statusEl = document.getElementById('healthReportStatus');
-    const btnEl = document.getElementById('healthReportBtn');
+    const btnEl = document.getElementById('startHealthCheckBtn');
     
-    if (reportEl && reportEl.innerHTML.trim() !== '') {
-        // Report completed
-        statusEl.textContent = t('reportCompleted');
-        btnEl.textContent = t('viewTodaysReport');
+    if (!btnEl) return;
+    
+    const today = new Date().toDateString();
+    const completedToday = (lastHealthCheckDate === today) && reportEl && reportEl.innerHTML.trim() !== '';
+    
+    if (completedToday) {
+        // Report completed today - show View Report
+        btnEl.textContent = t('viewTodaysReport') || t('startHealthCheckBtn');
+        btnEl.onclick = () => {
+            // Just scroll to show the report, don't restart
+            reportEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        };
     } else {
-        // No report yet
-        statusEl.textContent = t('trackDailyWellness');
-        btnEl.textContent = t('startTodaysHealthCheck');
+        // No report yet or new day - allow starting
+        btnEl.textContent = t('startHealthCheckBtn');
+        btnEl.onclick = startHealthCheck;
     }
 }
 
@@ -442,28 +486,105 @@ function initializeVoice() {
             
             // If not a language command, handle based on voice input mode
             if (!languageDetected) {
-                if (voiceInputMode === 'fact') {
-                    // Populate fact check input
-                    document.getElementById('factCheckInput').value = transcript;
-                    updateVoiceStatus('');
-                    voiceInputMode = null;
-                } else if (voiceInputMode === 'scam') {
-                    // Populate scam check input
-                    document.getElementById('scamInput').value = transcript;
-                    updateVoiceStatus('');
-                    voiceInputMode = null;
-                } else {
-                    // Regular chat message
-                    document.getElementById('chatInput').value = transcript;
-                    updateVoiceStatus('Sending message...');
+                // Check for emergency commands
+                const emergencyPatterns = [
+                    /\b(emergency|help|need help|urgent)\b/i,
+                    /\b(pomoc|núdzová situácia)\b/i,  // Slovak
+                    /\b(nouzové|potřebuji pomoc)\b/i,  // Czech
+                    /\b(notfall|hilfe|ich brauche hilfe)\b/i  // German
+                ];
+                
+                let isEmergency = false;
+                for (const pattern of emergencyPatterns) {
+                    if (pattern.test(transcriptLower)) {
+                        isEmergency = true;
+                        break;
+                    }
+                }
+                
+                if (isEmergency) {
+                    // Send emergency alert
+                    const emergencyMessages = {
+                        'en-US': 'Emergency help requested via voice command',
+                        'sk-SK': 'Pomoc požadovaná hlasovým príkazom',
+                        'cs-CZ': 'Pomoc požadována hlasovým příkazem',
+                        'de-DE': 'Notfallhilfe per Sprachbefehl angefordert'
+                    };
                     
-                    // Enable voice response for this conversation
-                    useVoiceResponse = true;
+                    sendTelegramAlert({
+                        alert_type: 'emergency',
+                        message: emergencyMessages[currentLanguage] || emergencyMessages['en-US'],
+                        health_data: healthCheckData
+                    });
                     
-                    // Automatically send the message after speech recognition
-                    setTimeout(() => {
-                        sendMessage();
-                    }, 500);
+                    // Show confirmation
+                    const confirmations = {
+                        'en-US': 'Emergency alert sent! Help is being notified.',
+                        'sk-SK': 'Pomoc bola zavolaná! Oznámenie bolo odoslané.',
+                        'cs-CZ': 'Nüzová výzva odeslána! Pomoc byla informována.',
+                        'de-DE': 'Notruf gesendet! Hilfe wird benachrichtigt.'
+                    };
+                    
+                    addChatMessage('assistant', confirmations[currentLanguage] || confirmations['en-US']);
+                    updateVoiceStatus('');
+                    return;
+                }
+                
+                // Check for news keyword commands
+                const newsPatterns = [
+                    /news about (.+)/i,
+                    /správy o (.+)/i,  // Slovak
+                    /zprávy o (.+)/i,  // Czech
+                    /nachrichten über (.+)/i  // German
+                ];
+                
+                let newsKeywordFound = false;
+                for (const pattern of newsPatterns) {
+                    const match = transcript.match(pattern);
+                    if (match && newsKeywords.length > 0) {
+                        const spokenKeyword = match[1].toLowerCase().trim();
+                        
+                        // Find closest matching keyword
+                        const matchedKeyword = newsKeywords.find(kw => 
+                            kw.toLowerCase().includes(spokenKeyword) || 
+                            spokenKeyword.includes(kw.toLowerCase())
+                        );
+                        
+                        if (matchedKeyword) {
+                            // Switch to social tab and select keyword
+                            showTab('connections');
+                            selectNewsKeyword(matchedKeyword);
+                            updateVoiceStatus('');
+                            newsKeywordFound = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if (!newsKeywordFound) {
+                    if (voiceInputMode === 'fact') {
+                        // Populate fact check input
+                        document.getElementById('factCheckInput').value = transcript;
+                        updateVoiceStatus('');
+                        voiceInputMode = null;
+                    } else if (voiceInputMode === 'scam') {
+                        // Populate scam check input
+                        document.getElementById('scamInput').value = transcript;
+                        updateVoiceStatus('');
+                        voiceInputMode = null;
+                    } else {
+                        // Regular chat message
+                        document.getElementById('chatInput').value = transcript;
+                        updateVoiceStatus('Sending message...');
+                        
+                        // Enable voice response for this conversation
+                        useVoiceResponse = true;
+                        
+                        // Automatically send the message after speech recognition
+                        setTimeout(() => {
+                            sendMessage();
+                        }, 500);
+                    }
                 }
             }
         };
@@ -673,13 +794,29 @@ async function sendMessage() {
         addChatMessage('assistant', aiResponse);
         chatHistory.push({ role: 'assistant', content: aiResponse });
         
-        // Check if health check is complete
-        if (healthCheckActive && aiResponse.toLowerCase().includes('recorded your health information')) {
-            healthCheckActive = false;
-            generateHealthReport();
-        }
+        // Check if health check is complete (check for completion phrases in all languages)
+        const completionPhrases = [
+            'recorded your health information',
+            'zaznamenal som vaše zdravotné informácie',
+            'zaznamenal jsem vaše zdravotní informace',
+            'ihre gesundheitsinformationen aufgezeichnet',
+            'dennú zdravotnú kontrolu',
+            'denní zdravotní kontrolu',
+            'gesundheitscheck'
+        ];
         
-        // Speak the response only if user used voice input
+                const isComplete = completionPhrases.some(phrase => 
+            aiResponse.toLowerCase().includes(phrase.toLowerCase())
+        );
+        
+        if (healthCheckActive && isComplete) {
+            healthCheckActive = false;
+            
+            // Extract health data from conversation
+            extractHealthDataFromChat();
+            
+            generateHealthReport();
+        }        // Speak the response only if user used voice input
         if (useVoiceResponse) {
             speakText(aiResponse);
         }
@@ -841,6 +978,154 @@ function displayFactCheckResult(result) {
 }
 
 // Local Activities
+// ==========================================
+// News Functions
+// ==========================================
+
+let newsArticles = [];
+let newsKeywords = [];
+let selectedKeyword = null;
+
+async function loadNews() {
+    const newsSection = document.getElementById('newsSection');
+    if (!newsSection) return;
+    
+    newsSection.innerHTML = '<p class="loading">' + t('loadingNews') + '</p>';
+    
+    // Map current language to country code
+    const languageToCountry = {
+        'en-US': 'us',
+        'sk-SK': 'sk',
+        'cs-CZ': 'cz',
+        'de-DE': 'de'
+    };
+    
+    const country = languageToCountry[currentLanguage] || 'us';
+    const languageCode = currentLanguage.split('-')[0];
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/news/news?country=${country}&language=${languageCode}`);
+        
+        if (!response.ok) {
+            throw new Error('Failed to fetch news');
+        }
+        
+        const data = await response.json();
+        newsArticles = data.articles;
+        
+        // Extract keywords from articles
+        extractNewsKeywords();
+        displayNewsKeywords();
+    } catch (error) {
+        console.error('Error loading news:', error);
+        newsSection.innerHTML = '<p>Unable to load news at this time.</p>';
+    }
+}
+
+function extractNewsKeywords() {
+    const keywordMap = new Map();
+    
+    // Common stop words to filter out
+    const stopWords = new Set(['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'from', 'as', 'is', 'was', 'are', 'has', 'have', 'been', 'will', 'would', 'could', 'should']);
+    
+    newsArticles.forEach(article => {
+        const text = (article.title + ' ' + (article.description || '')).toLowerCase();
+        const words = text.match(/\b[a-z]{4,}\b/g) || [];
+        
+        words.forEach(word => {
+            if (!stopWords.has(word)) {
+                keywordMap.set(word, (keywordMap.get(word) || 0) + 1);
+            }
+        });
+    });
+    
+    // Sort by frequency and take top keywords
+    newsKeywords = Array.from(keywordMap.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 15)
+        .map(entry => entry[0]);
+}
+
+function displayNewsKeywords() {
+    const newsSection = document.getElementById('newsSection');
+    
+    if (newsKeywords.length === 0) {
+        newsSection.innerHTML = '<p>No news available at this time.</p>';
+        return;
+    }
+    
+    const translations = {
+        'en-US': { selectTopic: 'Select a topic to see related news:', voiceCmd: 'Say "news about [topic]" or click a topic' },
+        'sk-SK': { selectTopic: 'Vyberte tému pre zobrazenie súvisiacich správ:', voiceCmd: 'Povedzte "správy o [téma]" alebo kliknite na tému' },
+        'cs-CZ': { selectTopic: 'Vyberte téma pro zobrazení souvisejících zpráv:', voiceCmd: 'Řekněte "zprávy o [téma]" nebo klikněte na téma' },
+        'de-DE': { selectTopic: 'Wählen Sie ein Thema, um verwandte Nachrichten zu sehen:', voiceCmd: 'Sagen Sie "Nachrichten über [Thema]" oder klicken Sie auf ein Thema' }
+    };
+    
+    const t = translations[currentLanguage] || translations['en-US'];
+    
+    newsSection.innerHTML = `
+        <div style="margin-bottom: 20px;">
+            <p style="color: rgba(255,255,255,0.9); font-size: 1.1em; margin-bottom: 10px;">${t.selectTopic}</p>
+            <p style="color: rgba(255,255,255,0.6); font-size: 0.9em; margin-bottom: 15px;">🎤 ${t.voiceCmd}</p>
+            <div class="keyword-container" style="display: flex; flex-wrap: wrap; gap: 10px;">
+                ${newsKeywords.map(keyword => `
+                    <button class="keyword-btn" onclick="selectNewsKeyword('${keyword}')" style="
+                        padding: 10px 20px;
+                        background: rgba(74, 144, 226, 0.2);
+                        border: 2px solid #4A90E2;
+                        border-radius: 25px;
+                        color: #fff;
+                        font-size: 1em;
+                        cursor: pointer;
+                        transition: all 0.3s ease;
+                    ">${keyword}</button>
+                `).join('')}
+            </div>
+        </div>
+        <div id="selectedNewsArticles"></div>
+    `;
+}
+
+function selectNewsKeyword(keyword) {
+    selectedKeyword = keyword;
+    
+    // Filter articles containing the keyword
+    const filteredArticles = newsArticles.filter(article => {
+        const text = (article.title + ' ' + (article.description || '')).toLowerCase();
+        return text.includes(keyword.toLowerCase());
+    });
+    
+    displayFilteredNews(filteredArticles, keyword);
+}
+
+function displayFilteredNews(articles, keyword) {
+    const articlesEl = document.getElementById('selectedNewsArticles');
+    
+    if (!articles || articles.length === 0) {
+        articlesEl.innerHTML = `<p style="color: rgba(255,255,255,0.7);">No articles found for "${keyword}"</p>`;
+        return;
+    }
+    
+    articlesEl.innerHTML = `
+        <h4 style="color: #4A90E2; margin: 20px 0 15px 0; font-size: 1.2em;">📰 News about "${keyword}" (${articles.length})</h4>
+        ${articles.map(article => `
+            <div class="news-item" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 10px; border-left: 3px solid #4A90E2;">
+                ${article.urlToImage ? `<img src="${article.urlToImage}" alt="${article.title}" style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 8px; margin-bottom: 10px;">` : ''}
+                <h4 style="margin: 10px 0; font-size: 1.1em; color: #fff;">${article.title}</h4>
+                ${article.description ? `<p style="color: rgba(255,255,255,0.8); margin: 10px 0;">${article.description}</p>` : ''}
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                    <span style="color: rgba(255,255,255,0.6); font-size: 0.9em;">${article.source}</span>
+                    <a href="${article.url}" target="_blank" class="big-button primary-btn" style="padding: 8px 15px; font-size: 0.9em;">${t('readMore')}</a>
+                </div>
+            </div>
+        `).join('')}
+    `;
+}
+
+// ==========================================
+// Activities Functions
+// ==========================================
+
 async function loadLocalActivities() {
     const activitiesEl = document.getElementById('localActivities');
     activitiesEl.innerHTML = '<p class="loading">Finding activities near you...</p>';
@@ -916,6 +1201,14 @@ function openDirections(name, address) {
 
 // Daily Health Report Functions
 function startHealthCheck() {
+    // Check if already completed today
+    const today = new Date().toDateString();
+    if (lastHealthCheckDate === today) {
+        // Just show the report
+        showTab('health');
+        return;
+    }
+    
     healthCheckActive = true;
     healthCheckData = {};
     
@@ -942,7 +1235,11 @@ function startHealthCheck() {
 5. Did you eat regular meals today?
 6. Any other health concerns?
 
-After all questions, say: "Thank you! I've recorded your health information for today."
+After all questions, say one of these completion messages based on the language:
+- English: "Thank you! I've recorded your health information for today."
+- Slovak: "Ďakujem! Zaznamenal som vaše zdravotné informácie za dnes."
+- Czech: "Děkuji! Zaznamenal jsem vaše zdravotní informace za dnes."
+- German: "Danke! Ich habe Ihre Gesundheitsinformationen für heute aufgezeichnet."
 
 Be warm, patient, and understanding. Ask questions naturally.`
     });
@@ -976,6 +1273,124 @@ Be warm, patient, and understanding. Ask questions naturally.`
             speakText(question);
         }
     }, 1500);
+}
+
+function extractHealthDataFromChat() {
+    // Parse recent chat messages to extract health information
+    // Get both user messages and AI questions for context
+    const recentConversation = chatHistory.slice(-12);
+    
+    // Track the last question asked to match answers
+    let lastSleepQuestion = false;
+    let lastRatingQuestion = false;
+    let lastMedicationQuestion = false;
+    let lastMealQuestion = false;
+    let lastPainQuestion = false;
+    
+    recentConversation.forEach((entry, index) => {
+        const msg = entry.content.toLowerCase();
+        
+        // Check if AI asked about sleep
+        if (entry.role === 'assistant' && (msg.includes('sleep') || msg.includes('spali') || msg.includes('spal') || msg.includes('geschlafen'))) {
+            lastSleepQuestion = true;
+            lastRatingQuestion = false;
+        }
+        
+        // Check if AI asked about mood/health rating
+        if (entry.role === 'assistant' && (msg.includes('feel') || msg.includes('scale') || msg.includes('cítite') || msg.includes('cítíte') || msg.includes('fühlen') || msg.includes('rating'))) {
+            lastRatingQuestion = true;
+            lastSleepQuestion = false;
+        }
+        
+        // Check if AI asked about medications
+        if (entry.role === 'assistant' && (msg.includes('medic') || msg.includes('liek') || msg.includes('lék'))) {
+            lastMedicationQuestion = true;
+        }
+        
+        // Check if AI asked about meals
+        if (entry.role === 'assistant' && (msg.includes('meal') || msg.includes('eat') || msg.includes('jedl') || msg.includes('essen') || msg.includes('jídl'))) {
+            lastMealQuestion = true;
+        }
+        
+        // Check if AI asked about pain
+        if (entry.role === 'assistant' && (msg.includes('pain') || msg.includes('boles') || msg.includes('schmerz'))) {
+            lastPainQuestion = true;
+        }
+        
+        // Process user responses
+        if (entry.role === 'user') {
+            // Extract sleep hours - only if sleep was asked OR keyword present
+            const sleepMatch = msg.match(/(\d+)\s*(hour|hodín|hodin|stunden)/i);
+            if (sleepMatch && sleepMatch[1] && !healthCheckData.sleep) {
+                const hours = parseInt(sleepMatch[1]);
+                // Only accept reasonable sleep values (0-24 hours)
+                if (hours >= 0 && hours <= 24) {
+                    healthCheckData.sleep = sleepMatch[1];
+                    console.log('✅ Captured sleep hours (with keyword):', sleepMatch[1]);
+                    lastSleepQuestion = false;
+                }
+            } else if (lastSleepQuestion && !healthCheckData.sleep) {
+                // If sleep was just asked and no "hour" keyword, look for standalone number
+                const numMatch = msg.match(/\b(\d+)\b/);
+                if (numMatch) {
+                    const hours = parseInt(numMatch[1]);
+                    if (hours >= 0 && hours <= 24) {
+                        healthCheckData.sleep = numMatch[1];
+                        console.log('✅ Captured sleep hours (standalone):', numMatch[1]);
+                        lastSleepQuestion = false;
+                    }
+                }
+            }
+            
+            // Extract health rating - only if rating was asked OR specific format
+            const ratingMatch = msg.match(/\b(\d+)\s*\/\s*10\b|\b(\d+)\s*(out of|z)\s*10\b/i);
+            if (ratingMatch) {
+                healthCheckData.health_rating = ratingMatch[1] || ratingMatch[2];
+                lastRatingQuestion = false;
+            } else if (lastRatingQuestion && !healthCheckData.health_rating) {
+                // Look for standalone number between 1-10 only if rating was just asked
+                const simpleRating = msg.match(/\b([1-9]|10)\b/);
+                if (simpleRating) {
+                    healthCheckData.health_rating = simpleRating[1];
+                    lastRatingQuestion = false;
+                }
+            }
+            
+            // Extract pain info - either contains keyword OR follows pain question
+            if (msg.includes('pain') || msg.includes('boles') || msg.includes('schmerz') || lastPainQuestion) {
+                healthCheckData.pain = entry.content;  // Store original case
+                lastPainQuestion = false;  // Reset flag
+            }
+            
+            // Extract medication status - either contains keyword OR follows medication question
+            const hasMedicKeyword = msg.includes('medic') || msg.includes('liek') || msg.includes('lék');
+            const hasYes = msg.includes('yes') || msg.includes('áno') || msg.includes('ano') || msg.includes('ja');
+            const hasNo = msg.includes('no') || msg.includes('nie') || msg.includes('ne') || msg.includes('nein');
+            
+            if (hasMedicKeyword || lastMedicationQuestion) {
+                if (hasYes) {
+                    healthCheckData.medications = 'Yes, taken';
+                    lastMedicationQuestion = false;  // Reset flag
+                } else if (hasNo) {
+                    healthCheckData.medications = 'No, not taken';
+                    lastMedicationQuestion = false;  // Reset flag
+                }
+            }
+            
+            // Extract meal status - either contains keyword OR follows meal question
+            const hasMealKeyword = msg.includes('meal') || msg.includes('eat') || msg.includes('jedl') || msg.includes('essen') || msg.includes('jídl');
+            
+            if (hasMealKeyword || lastMealQuestion) {
+                if (hasYes) {
+                    healthCheckData.meals = 'Yes, regular meals';
+                    lastMealQuestion = false;  // Reset flag
+                } else if (hasNo) {
+                    healthCheckData.meals = 'No, skipped meals';
+                    lastMealQuestion = false;  // Reset flag
+                }
+            }
+        }
+    });
 }
 
 function generateHealthReport() {
@@ -1036,12 +1451,217 @@ function generateHealthReport() {
         addChatMessage('assistant', messages[currentLanguage] || messages['en-US']);
         chatHistory.push({ role: 'assistant', content: summary });
         
+        // Save report to database and check concerns
+        saveHealthReportToDatabase(summary);
+        
         // Update health report status on home tab
         updateHealthReportStatus();
     })
     .catch(error => {
         console.error('Error generating health report:', error);
     });
+}
+
+async function saveHealthReportToDatabase(summary) {
+    try {
+        console.log('=== Health check data before parsing ===');
+        console.log('healthCheckData.sleep:', healthCheckData.sleep);
+        console.log('healthCheckData.health_rating:', healthCheckData.health_rating);
+        console.log('Full healthCheckData:', healthCheckData);
+        console.log('Summary:', summary);
+        
+        // Parse sleep hours properly - extract number from response, default to 0 if not found
+        let sleepHours = 0;
+        if (healthCheckData.sleep) {
+            const sleepMatch = healthCheckData.sleep.toString().match(/(\d+)/);
+            if (sleepMatch) {
+                sleepHours = parseInt(sleepMatch[1]);
+                console.log('✅ Parsed sleepHours:', sleepHours);
+            } else {
+                console.log('⚠️ Could not parse sleep hours from:', healthCheckData.sleep);
+            }
+        } else {
+            console.log('❌ healthCheckData.sleep is empty or undefined');
+        }
+
+        // Parse mood rating - extract number, default to 0 if not found
+        let moodRating = 0;
+        if (healthCheckData.health_rating) {
+            const ratingMatch = healthCheckData.health_rating.toString().match(/(\d+)/);
+            if (ratingMatch) {
+                moodRating = parseInt(ratingMatch[1]);
+                console.log('✅ Parsed moodRating:', moodRating);
+            }
+        }
+        
+        // Parse pain severity from pain description
+        let painSeverity = 0;
+        const painStr = (healthCheckData.pain || '').toLowerCase();
+        if (painStr.includes('severe') || painStr.includes('7') || painStr.includes('8') || painStr.includes('9') || painStr.includes('10')) {
+            painSeverity = 8;
+        } else if (painStr.includes('moderate') || painStr.includes('5') || painStr.includes('6')) {
+            painSeverity = 5;
+        } else if (painStr.includes('mild') || painStr.includes('3') || painStr.includes('4')) {
+            painSeverity = 3;
+        } else if (painStr !== 'no' && painStr !== 'none' && painStr.length > 0) {
+            painSeverity = 1;
+        }
+        
+        // Handle medicationsTaken - check if the field exists and has content
+        let medicationsTaken = "No";
+        const medsData = healthCheckData.medications;
+        if (medsData && typeof medsData === 'string') {
+            const medsStr = medsData.toLowerCase();
+            if (medsStr.includes('yes') || medsStr.includes('taken') || medsStr.includes('áno') || medsStr.includes('ano') || medsStr.includes('ja')) {
+                medicationsTaken = "Yes";
+            }
+        }
+        
+        // Handle meals - check if the field exists and has content
+        let meals = "Yes";
+        const mealsData = healthCheckData.meals;
+        if (mealsData && typeof mealsData === 'string') {
+            const mealsStr = mealsData.toLowerCase();
+            if (mealsStr.includes('no') || mealsStr.includes('skipped') || mealsStr.includes('nie') || mealsStr.includes('ne') || mealsStr.includes('nein')) {
+                meals = "No";
+            }
+        }
+        
+        // Handle healthConcerns - check if summary exists and has concerning content
+        let healthConcerns = "Yes";
+        if (summary && typeof summary === 'string' && summary.length > 0) {
+            const summaryLower = summary.toLowerCase();
+            const concernKeywords = ['concern', 'worried', 'problem', 'issue', 'severe', 'obava', 'problém', 'sorge', 'poor', 'bad'];
+            if (concernKeywords.some(keyword => summaryLower.includes(keyword))) {
+                healthConcerns = "No";
+            }
+        }
+        
+        const reportData = {
+            userId: 1,
+            sleepHours: sleepHours,
+            moodRating: moodRating,
+            pain: healthCheckData.pain && healthCheckData.pain.toLowerCase() !== 'no' && healthCheckData.pain.toLowerCase() !== 'none' ? "No" : "Yes",
+            painSeverity: painSeverity,
+            medicationsTaken: medicationsTaken,
+            meals: meals,
+            healthConcerns: healthConcerns
+        };
+        
+        console.log('Saving health report to database:', reportData);
+        
+        // Check for health concerns and send alert if needed (using parsed data)
+        await checkHealthConcerns(reportData);
+        
+        const response = await fetch(`${API_BASE_URL}/eldercare/send-report`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(reportData)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            console.log('✅ Health report saved to database successfully');
+        } else {
+            console.warn('⚠️ Failed to save health report to database:', result.message);
+        }
+    } catch (error) {
+        console.error('Error saving health report to database:', error);
+    }
+}
+
+async function checkHealthConcerns(reportData) {
+    let concerns = [];
+    let concernDetails = {};
+    
+    // Check sleep (using parsed sleepHours)
+    if (reportData.sleepHours !== undefined) {
+        const sleep = reportData.sleepHours;
+        if (sleep < 4) {
+            concerns.push('Very low sleep hours');
+            concernDetails.sleepHours = sleep + ' hours (too low)';
+        } else if (sleep > 12) {
+            concerns.push('Excessive sleep hours');
+            concernDetails.sleepHours = sleep + ' hours (excessive)';
+        } else {
+            concernDetails.sleepHours = sleep + ' hours';
+        }
+    }
+    
+    // Check health rating (using parsed moodRating)
+    if (reportData.moodRating !== undefined) {
+        const rating = reportData.moodRating;
+        if (rating < 4) {
+            concerns.push('Poor health rating');
+            concernDetails.moodRating = rating + '/10';
+        } else {
+            concernDetails.moodRating = rating + '/10';
+        }
+    }
+    
+    // Check pain (using parsed pain and painSeverity)
+    if (reportData.pain === "Yes") {
+        if (reportData.painSeverity >= 7) {
+            concerns.push('Severe pain reported');
+            concernDetails.pain = 'Yes (severity: ' + reportData.painSeverity + '/10)';
+        } else {
+            concernDetails.pain = 'Yes (severity: ' + reportData.painSeverity + '/10)';
+        }
+    } else {
+        concernDetails.pain = 'No';
+    }
+    
+    // Check medications (using parsed medicationsTaken)
+    if (reportData.medicationsTaken === "No") {
+        concerns.push('Medications not taken');
+        concernDetails.medicationsTaken = 'No';
+    } else {
+        concernDetails.medicationsTaken = 'Yes';
+    }
+    
+    // Check meals (using parsed meals)
+    if (reportData.meals === "No") {
+        concerns.push('Meals skipped');
+        concernDetails.meals = 'No';
+    } else {
+        concernDetails.meals = 'Yes';
+    }
+    
+    // Check health concerns (using parsed healthConcerns)
+    if (reportData.healthConcerns === "Yes") {
+        concerns.push('Health concerns reported');
+        concernDetails.healthConcerns = 'Yes';
+    } else {
+        concernDetails.healthConcerns = 'No';
+    }
+    
+    // Send alert if there are concerns
+    if (concerns.length > 0) {
+        await sendTelegramAlert({
+            alert_type: 'health_concern',
+            message: 'Health check revealed concerning conditions: ' + concerns.join(', '),
+            health_data: concernDetails
+        });
+    }
+}
+
+async function sendTelegramAlert(alertData) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/telegram/alert`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(alertData)
+        });
+        
+        if (response.ok) {
+            console.log('Emergency alert sent to Telegram');
+        } else {
+            console.error('Failed to send Telegram alert:', await response.text());
+        }
+    } catch (error) {
+        console.error('Error sending Telegram alert:', error);
+    }
 }
 
 // Student Matches
