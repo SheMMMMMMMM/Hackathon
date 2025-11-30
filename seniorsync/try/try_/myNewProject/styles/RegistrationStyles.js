@@ -1,0 +1,102 @@
+import { StyleSheet, Platform } from "react-native";
+
+export const RegistrationStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+  },
+  scrollContent: {
+    paddingHorizontal: 24,
+    paddingTop: 32,
+    paddingBottom: 40,
+    alignItems: "center",
+  },
+  header: {
+    alignItems: "center",
+    marginBottom: 40,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: "700",
+    color: "#0A3D62",
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: "#5A6B7C",
+  },
+  stepContainer: {
+    width: "100%",
+    marginBottom: 28,
+  },
+  stepCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#66B2FF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 12,
+    alignSelf: "center",
+  },
+  stepNumber: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  stepTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#0A3D62",
+    textAlign: "center",
+    marginBottom: 16,
+  },
+  textInput: {
+    width: "100%",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: "#66B2FF",
+    fontSize: 16,
+    color: "#0A3D62",
+    backgroundColor: "#F9FAFB",
+  },
+  createButton: {
+    width: "100%",
+    paddingVertical: 16,
+    borderRadius: 16,
+    backgroundColor: "#66B2FF",
+    alignItems: "center",
+    marginTop: 24,
+    shadowColor: "#66B2FF",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  createButtonText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    letterSpacing: 1,
+  },
+  signInContainer: {
+    flexDirection: "row",
+    marginTop: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  signInText: {
+    fontSize: 14,
+    color: "#5A6B7C",
+    marginRight: 4,
+  },
+  signInLink: {
+    fontSize: 14,
+    color: "#66B2FF",
+    fontWeight: "600",
+    textDecorationLine: "underline",
+  },
+});
